@@ -1,0 +1,156 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model AnswerComment {
+  id         Int      @id @default(autoincrement())
+  answerId   Int
+  userId     String   @db.VarChar(255)
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @db.DateTime(0)
+  updatedAt  DateTime @default(now()) @db.DateTime(0)
+  facebookId String?  @unique(map: "facebookId") @db.VarChar(31)
+  Answer     Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "AnswerComment_fk0")
+  User       User     @relation(fields: [userId], references: [uid], onDelete: NoAction, onUpdate: NoAction, map: "AnswerComment_fk1")
+
+  @@index([answerId], map: "AnswerComment_fk0")
+  @@index([userId], map: "AnswerComment_fk1")
+}
+
+model AnswerVoter {
+  id       Int    @id @default(autoincrement())
+  userId   String @db.VarChar(255)
+  answerId Int
+  state    Int    @default(0)
+  Answer   Answer @relation(fields: [answerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "AnswerVoter_fk1")
+  User     User   @relation(fields: [userId], references: [uid], onDelete: Cascade, onUpdate: NoAction, map: "AnswerVoter_fk0")
+
+  @@index([userId], map: "AnswerVoter_fk0")
+  @@index([answerId], map: "AnswerVoter_fk1")
+}
+
+model Answer {
+  id            Int             @id @default(autoincrement())
+  questionId    Int
+  userId        String          @db.VarChar(255)
+  content       String          @db.Text
+  score         Int             @default(0)
+  deleted       Boolean         @default(false)
+  verify        Boolean         @default(false)
+  createdAt     DateTime        @default(now()) @db.DateTime(0)
+  updatedAt     DateTime        @default(now()) @db.DateTime(0)
+  facebookId    String?         @unique(map: "facebookId") @db.VarChar(31)
+  Question      Question        @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Answer_fk0")
+  User          User            @relation(fields: [userId], references: [uid], onDelete: NoAction, onUpdate: NoAction, map: "Answer_fk1")
+  AnswerComment AnswerComment[]
+  AnswerVoter   AnswerVoter[]
+
+  @@index([questionId], map: "Answer_fk0")
+  @@index([userId], map: "Answer_fk1")
+}
+
+model QuestionComment {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  userId     String   @db.VarChar(255)
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @db.DateTime(0)
+  updatedAt  DateTime @default(now()) @db.DateTime(0)
+  facebookId String?  @unique(map: "facebookId") @db.VarChar(31)
+  Question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "QuestionComment_fk0")
+  User       User     @relation(fields: [userId], references: [uid], onDelete: NoAction, onUpdate: NoAction, map: "QuestionComment_fk1")
+
+  @@index([questionId], map: "QuestionComment_fk0")
+  @@index([userId], map: "QuestionComment_fk1")
+}
+
+model QuestionVoter {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  userId     String   @db.VarChar(255)
+  state      Int      @default(0)
+  Question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "QuestionVoter_fk0")
+  User       User     @relation(fields: [userId], references: [uid], onDelete: Cascade, onUpdate: NoAction, map: "QuestionVoter_fk1")
+
+  @@index([questionId], map: "QuestionVoter_fk0")
+  @@index([userId], map: "QuestionVoter_fk1")
+}
+
+model Question {
+  id              Int               @id @default(autoincrement())
+  userId          String            @db.VarChar(255)
+  title           String            @db.VarChar(255)
+  content         String            @db.Text
+  score           Int               @default(0)
+  deleted         Boolean           @default(false)
+  createdAt       DateTime          @default(now()) @db.DateTime(0)
+  updatedAt       DateTime          @default(now()) @db.DateTime(0)
+  facebookId      String?           @unique(map: "facebookId") @db.VarChar(31)
+  User            User              @relation(fields: [userId], references: [uid], onDelete: NoAction, onUpdate: NoAction, map: "Question_fk0")
+  Answer          Answer[]
+  QuestionComment QuestionComment[]
+  QuestionVoter   QuestionVoter[]
+  TagsOnQuestions TagsOnQuestions[]
+
+  @@index([userId], map: "Question_fk0")
+  @@fulltext([title, content], map: "title")
+}
+
+model Tag {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique(map: "name") @db.VarChar(255)
+  TagsOnQuestions TagsOnQuestions[]
+  TagsOnUsers     TagsOnUsers[]
+}
+
+model User {
+  uid             String            @id @db.VarChar(255)
+  reputation      Int               @default(0)
+  description     String?           @db.Text
+  joiningDate     DateTime          @default(dbgenerated("(curdate())")) @db.Date
+  displayName     String            @db.VarChar(255)
+  photoURL        String?           @db.Text
+  phoneNumber     String?           @db.VarChar(20)
+  email           String            @unique(map: "email") @db.VarChar(255)
+  Answer          Answer[]
+  AnswerComment   AnswerComment[]
+  AnswerVoter     AnswerVoter[]
+  Question        Question[]
+  QuestionComment QuestionComment[]
+  QuestionVoter   QuestionVoter[]
+  InterestedTag   TagsOnUsers[]
+
+  @@fulltext([displayName, email], map: "displayName")
+}
+
+model Document {
+  id    Int    @id @default(autoincrement())
+  title String @db.Text
+  url   String @db.Text
+}
+
+model TagsOnQuestions {
+  questionId Int
+  tagId      Int
+  Question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "TagsOnQuestions_fk0")
+  Tag        Tag      @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "TagsOnQuestions_fk1")
+
+  @@id([questionId, tagId])
+  @@index([tagId], map: "TagsOnQuestions_fk1")
+}
+
+model TagsOnUsers {
+  tagId  Int
+  userId String @db.VarChar(255)
+  Tag    Tag    @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "TagsOnUsers_fk0")
+  User   User   @relation(fields: [userId], references: [uid], onDelete: Cascade, onUpdate: NoAction, map: "TagsOnUsers_fk1")
+
+  @@id([tagId, userId])
+  @@index([userId], map: "TagsOnUsers_fk1")
+}
